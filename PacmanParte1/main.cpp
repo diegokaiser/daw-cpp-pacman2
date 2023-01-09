@@ -1,4 +1,5 @@
-#include "Map.h"
+#include "ProgramInfo.h"
+
 
 /// <summary>
 /// Sets the needed variables
@@ -17,20 +18,12 @@ void Logic();
 /// </summary>
 void Draw();
 
-enum USER_INPUTS { NONE, UP, DOWN, RIGHT, LEFT, QUIT };
-Map pacman_map = Map();
-char player_char = 'O';
-int player_x = 1;
-int player_y = 1;
-int player_points = 0;
-USER_INPUTS input = USER_INPUTS::NONE;
-bool run = true;
-bool win = false;
+ProgramInfo info;
 
 int main()
 {
     Setup();
-    while (run)
+    while (info.run)
     {
         Input();
         Logic();
@@ -41,114 +34,114 @@ int main()
 void Setup()
 {
     std::cout.sync_with_stdio(false);
-    player_x = pacman_map.spawn_player.X;
-    player_y = pacman_map.spawn_player.Y;
+    srand(time(NULL));
+
+    unsigned short enemyNumber = 0;
+    std::cout << "DO YOU FEEL LUCKY?\n HOW MANY ENEMIES CAN YOU HANDLE?";
+    std::cin >> enemyNumber;
+    for (size_t i = 0; i < enemyNumber; i++)
+    {
+        info.enemigos.push_back(Enemy(info.pacman_map.spawn_enemy));
+    }
 }
 
 void Input()
 {
-    input = USER_INPUTS::NONE;
+    info.input = USER_INPUTS::NONE;
     if (ConsoleUtils::KeyPressed(VK_UP) || ConsoleUtils::KeyPressed('W'))
     {
-        input = USER_INPUTS::UP;
+        info.input = USER_INPUTS::UP;
     }
     if (ConsoleUtils::KeyPressed(VK_DOWN) || ConsoleUtils::KeyPressed('S'))
     {
-        input = USER_INPUTS::DOWN;
+        info.input = USER_INPUTS::DOWN;
     }
     if (ConsoleUtils::KeyPressed(VK_RIGHT) || ConsoleUtils::KeyPressed('D'))
     {
-        input = USER_INPUTS::RIGHT;
+        info.input = USER_INPUTS::RIGHT;
     }
     if (ConsoleUtils::KeyPressed(VK_LEFT) || ConsoleUtils::KeyPressed('A'))
     {
-        input = USER_INPUTS::LEFT;
+        info.input = USER_INPUTS::LEFT;
     }
     if (ConsoleUtils::KeyPressed(VK_ESCAPE) || ConsoleUtils::KeyPressed('Q'))
     {
-        input = USER_INPUTS::QUIT;
+        info.input = USER_INPUTS::QUIT;
     }
 }
 
 void Logic()
 {
-    if (win)
+    if (info.win || info.lose)
     {
-        switch (input)
+        switch (info.input)
         {
         case QUIT:
-            run = false;
+            info.run = false;
             break;
         }
     }
     else
     {
-        int player_y_new = player_y;
-        int player_x_new = player_x;
-        switch (input)
-        {
-        case UP:
-            player_y_new--;
-            break;
-        case DOWN:
-            player_y_new++;
-            break;
-        case RIGHT:
-            player_x_new++;
-            break;
-        case LEFT:
-            player_x_new--;
-            break;
-        case QUIT:
-            run = false;
-            break;
-        }
-        if (player_x_new < 0)
-        {
-            player_x_new = pacman_map.Width - 1;
-        }
-        player_x_new %= pacman_map.Width;
-        if (player_y_new < 0)
-        {
-            player_y_new = pacman_map.Height - 1;
-        }
-        player_y_new %= pacman_map.Height;
+        if (info.input == USER_INPUTS::QUIT)
+            info.run = false;
 
-        switch (pacman_map.GetTile(player_x_new, player_y_new))
-        {
-        case Map::MAP_TILES::MAP_WALL:
-            player_y_new = player_y;
-            player_x_new = player_x;
-            break;
-        case Map::MAP_TILES::MAP_POINT:
-            pacman_map.points--;
-            player_points++;
-            pacman_map.SetTile(player_x_new, player_y_new, Map::MAP_TILES::MAP_EMPTY);
-            break;
-        }
+        info.player.Update(&info.pacman_map, info.input, &info.enemigos);
 
-        player_y = player_y_new;
-        player_x = player_x_new;
-        if (pacman_map.points <= 0)
+        for (size_t i = 0; i < info.enemigos.size(); i++)
         {
-            win = true;
+            Enemy::ENEMY_STATE enemystate = info.enemigos[i].Update(&info.pacman_map, info.player.position);
+            switch (enemystate)
+            {
+            case Enemy::ENEMY_KILLED:
+                info.player.points += 50;
+                break;
+            case Enemy::ENEMY_DEAD:
+                info.player.position = info.pacman_map.spawn_player;
+                info.player.vidas--;
+                break;
+            }
+        }
+        if (info.player.vidas <= 0)
+        {
+            info.lose = true;
+        }
+        if (info.pacman_map.points <= 0)
+        {
+            info.win = true;
         }
     }
 }
 
 void Draw()
 {
-    ConsoleUtils::Console_SetPos(0,0);
-    pacman_map.Draw();
-    ConsoleUtils::Console_SetPos(player_x, player_y);
-    ConsoleUtils::Console_SetColor(ConsoleUtils::CONSOLE_COLOR::DARK_YELLOW);
-    std::cout << player_char;
-    ConsoleUtils::Console_ClearCharacter({ 0,(short)pacman_map.Height });
+    ConsoleUtils::Console_SetPos(0, 0);
+    info.pacman_map.Draw();
+    //ConsoleUtils::Console_SetPos(player_x, player_y);
+    //ConsoleUtils::Console_SetColor(ConsoleUtils::CONSOLE_COLOR::DARK_YELLOW);
+    //std::cout << player_char;
+    info.player.Draw();
+
+    for (size_t i = 0; i < info.enemigos.size(); i++)
+    {
+        info.enemigos[i].Draw();
+    }
+
+    ConsoleUtils::Console_ClearCharacter({ 0,(short)info.pacman_map.Height });
     ConsoleUtils::Console_SetColor(ConsoleUtils::CONSOLE_COLOR::CYAN);
-    std::cout << "Puntuacion actual: " << player_points << " Puntuacion pendiente: " << pacman_map.points << std::endl;
-    if (win)
+    std::cout << "POINTS: " << info.player.points << " REMAINING: " << info.pacman_map.points << std::endl;
+    if (info.win)
     {
         ConsoleUtils::Console_SetColor(ConsoleUtils::CONSOLE_COLOR::GREEN);
-        std::cout << "Has ganado!" << std::endl;
+        std::cout << "YOU WIN!" << std::endl;
     }
+    if (info.lose)
+    {
+        ConsoleUtils::Console_SetColor(ConsoleUtils::CONSOLE_COLOR::RED);
+        std::cout << "YOU LOSE\nGAME OVER" << std::endl;
+    }
+    std::cout << "FPS: " << TimeManager::getInstance().frameCount << std::endl;
+    std::cout << "Time: " << TimeManager::getInstance().time << std::endl;
+    std::cout << "DeltaTime: " << TimeManager::getInstance().deltaTime << std::endl;
+    TimeManager::getInstance().NextFrame();
 }

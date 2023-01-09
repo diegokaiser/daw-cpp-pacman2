@@ -1,6 +1,10 @@
 #pragma once
 
 #include "ConsoleUtils.h"
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
 #include <map>
 
 class Map
@@ -9,7 +13,7 @@ public:
 	/// <summary>
 	/// The map tiles and it's symbols
 	/// </summary>
-	enum MAP_TILES { MAP_EMPTY = ' ', MAP_WALL = '#', MAP_POINT = '.'};
+	enum MAP_TILES { MAP_EMPTY = ' ', MAP_WALL = '#', MAP_POINT = '.', MAP_POWERUP = '*' };
 	/// <summary>
 	/// The background color given a map tile
 	/// </summary>
@@ -21,15 +25,15 @@ public:
 	/// <summary>
 	/// The width of the map
 	/// </summary>
-	const int Width = 44;
+	int Width = 44;
 	/// <summary>
 	/// The height of the map
 	/// </summary>
-	const int Height = 19;
+	int Height = 19;
 	/// <summary>
 	/// The amount of tiles in the map
 	/// </summary>
-	const int Size = Width * Height;
+	int Size = Width * Height;
 	/// <summary>
 	/// The remaining points in the map
 	/// </summary>
